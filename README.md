@@ -252,3 +252,67 @@ Jam 10:00:
 
 Jam 17:00:
 ![4.2](./imgs/4.2.PNG)
+
+### No 5
+
+Soal :
+Akses dari subnet Elena dan Fukuro hanya diperbolehkan pada pukul 15.01 hingga pukul 06.59 setiap harinya.
+
+Jawaban :
+Pada Doriki ditambahkan rule Iptables di bawah ini:
+
+```bash
+##Batas Akses Doriki Dari Elena
+iptables -A INPUT -s 192.194.10.0/23 -m time --timestart 15:01 --timestop 23:59 -j ACCEPT
+iptables -A INPUT -s 192.194.10.0/23 -m time --timestart 00:00 --timestop 06:59 -j ACCEPT
+iptables -A INPUT -s 192.194.10.0/23 -j REJECT
+
+##Batas Akses Doriki Dari Fukurou
+iptables -A INPUT -s 192.194.8.0/24 -m time --timestart 15:01 --timestop 23:59 -j ACCEPT
+iptables -A INPUT -s 192.194.8.0/24 -m time --timestart 00:00 --timestop 06:59 -j ACCEPT
+iptables -A INPUT -s 192.194.8.0/24 -j REJECT
+```
+
+dapat dites dengan melakukan ping dari Elena/Fukurou ke Doriki
+Jam 10:00:
+![5.1](./imgs/5.1.PNG)
+
+Jam 17:00:
+![5.2](./imgs/5.2.PNG)
+
+### No 6
+
+Soal :
+Karena kita memiliki 2 Web Server, Luffy ingin Guanhao disetting sehingga setiap request dari client yang mengakses DNS Server akan didistribusikan secara bergantian pada Jorge dan Maingate
+
+Jawaban :
+Ditambahkan perintah iptables sebagai berikut di Guanhao:
+
+```
+iptables -t nat -A PREROUTING -p tcp -d 192.194.13.1 --dport 80 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.194.9.2:80
+iptables -t nat -A PREROUTING -p tcp -d 192.194.13.1 --dport 80 -j DNAT --to-destination 192.194.9.3:80
+iptables -t nat -A POSTROUTING -p tcp -d 192.194.9.2 --dport 80 -j SNAT --to-source 192.194.13.1:80
+iptables -t nat -A POSTROUTING -p tcp -d 192.194.9.3 --dport 80 -j SNAT --to-source 192.194.13.1:80
+```
+
+Pada Jorge dan Maingate yang merupakan Web Server harus dilakukan instalasi apache2 dengan perintah `apt-get install apache2`. Kemudian membuat sites-available `jarkom.d05.com`.
+
+Kemudian pada DNS Server yaitu Doriki akan diinstall bind9 dengan perintah `apt-get install bind9`. Setelah itu dilakukan edit file `/etc/bind/named.conf.local` dan tambahkan domain baru misalkan **jarkom.d05.com** sebagai berikut:
+
+```
+zone "jarkom.d05.com" {
+    type master;
+    file "/etc/bind/jarkom/jarkom.d05.com";
+};
+```
+
+Kemudian buat folder baru: `mkdir /etc/bind/jarkom`
+
+Dan copy file `db.local` ke folder yang baru saja dibuat dan mengganti namanya sesuai domain yang diinginkan: `cp /etc/bind/db.local /etc/bind/jarkom/jarkomd07.com`
+Kemudian buka file `jarkomd07.com` dengan perintah: nano /etc/bind/jarkom/jarkomd07.com.
+
+Edit pointer **A** menjadi ke IP yang belum digunakan yaitu **192.194.13.1** serta ganti localhost menjadi nama domain yaitu **jarkom.d05.com**.
+
+Setelah itu melakukan restart service bind9 dengan perintah `service bind9 restart`.
+
+Untuk mengecek, misalkan pada klien Elena dan Cipher dijalankan `lynx jarkom.d05.com` kemudian enter. Kemudian pada Jorge dan Maingate akan dicoba lihat apakah diterima dan di mana diterimanya dengan perintah `tail /var/log/apache2/access.log`. Seharusnya pada Jorge dan Maingate terdapat `access.log` yang berjumlah masing-masing 1, berarti berhasil.
