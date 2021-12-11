@@ -1,6 +1,6 @@
 # Jarkom-Modul-5-D05-2021
 
-## Anggota Kelompok C10
+## Anggota Kelompok D05
 
 | Nama                          | NRP            |
 | ----------------------------- | -------------- |
