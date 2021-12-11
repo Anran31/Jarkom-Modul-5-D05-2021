@@ -211,3 +211,44 @@ Pada Foosha ditambahkan rule Iptables di bawah ini:
 ```bash
 iptables -A FORWARD -d 192.194.4.128/29 ! -s 192.194.0.0/20 -i eth0 -p tcp --dport 80 -j DROP
 ```
+
+### No 3
+
+Soal :
+Karena kelompok kalian maksimal terdiri dari 3 orang. Luffy meminta kalian untuk membatasi DHCP dan DNS Server hanya boleh menerima maksimal 3 koneksi ICMP secara bersamaan menggunakan iptables, selebihnya didrop.
+
+Jawaban :
+Pada Jipangu dan Doriki ditambahkan rule Iptables di bawah ini:
+
+```bash
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -p icmp -m connlimit --connlimit-above 3 --connlimit-mask 0 -j DROP
+```
+
+Dapat dites dengan mengeping jipangu/doriki dari 4 node berbeda, dimana pada node ke 4 tidak akan berhasil melakukan ping.
+
+### No 4
+
+Soal :
+Kemudian kalian diminta untuk membatasi akses ke Doriki yang berasal dari subnet Blueno, Cipher, Elena dan Fukuro dengan beraturan sebagai berikut
+Akses dari subnet Blueno dan Cipher hanya diperbolehkan pada pukul 07.00 - 15.00 pada hari Senin sampai Kamis.
+
+Jawaban :
+Pada Doriki ditambahkan rule Iptables di bawah ini:
+
+```bash
+## Batas Akses Doriki Dari Cipher
+iptables -A INPUT -s 192.194.0.0/22 -m time --timestart 07:00 --timestop 15:00 --weekdays Mon,Tue,Wed,Thu -j ACCEPT
+iptables -A INPUT -s 192.194.0.0/22 -j REJECT
+
+##Batas Akses Doriki Dari Blueno
+iptables -A INPUT -s 192.194.4.0/25 -m time --timestart 07:00 --timestop 15:00 --weekdays Mon,Tue,Wed,Thu -j ACCEPT
+iptables -A INPUT -s 192.194.4.0/25 -j REJECT
+```
+
+dapat dites dengan melakukan ping dari Cipher/Blueno ke Doriki
+Jam 10:00:
+![4.1](./imgs/4.1.PNG)
+
+Jam 17:00:
+![4.2](./imgs/4.2.PNG)
